@@ -1,673 +1,522 @@
-<!doctype html>
+ <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Slides Editor — save to JSONBin</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/modern-normalize/modern-normalize.css">
+<title>Slides — Google Slides-like Editor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
 <style>
   :root{
-    --bg:#0f1724; --card:#071022; --panel:#091826; --accent:#7c3aed; --muted:#94a3b8; --white:#e6eef8;
+    --bg:#f1f3f4; --top:#ffffff; --accent:#1a73e8; --muted:#5f6368; --panel:#ffffff; --shadow: rgba(60,64,67,0.15);
+    --left:#ffffff; --thumb-border:#e0e0e0; --slide-bg:#ffffff;
   }
-  html,body{height:100%; margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,#021025 0%, #071026 100%); color:var(--white);}
-  .app {display:flex; height:100vh; gap:12px; padding:14px;}
-  .sidebar {width:320px; background:var(--card); border-radius:10px; padding:12px; box-shadow:0 6px 18px rgba(2,6,23,.6); overflow:auto;}
-  .preview {flex:1; display:flex; flex-direction:column; gap:12px;}
-  header {display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px;}
-  h1{font-size:16px;margin:0}
-  .controls {display:flex; gap:8px; align-items:center;}
-  button {background:transparent; border:1px solid rgba(255,255,255,.06); color:var(--white); padding:8px 10px; border-radius:8px; cursor:pointer;}
-  button.primary {background:linear-gradient(90deg,var(--accent),#5b21b6); border:0;}
-  .hint {color:var(--muted); font-size:13px; margin-top:8px;}
-  .slides-list {display:flex; flex-direction:column; gap:8px; margin-top:12px;}
-  .slide-thumb {background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); border-radius:8px; padding:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;}
-  .slide-thumb.selected {outline:2px solid rgba(124,58,237,.35);}
-  .canvas {flex:1; display:flex; align-items:center; justify-content:center;}
-  .slide {width:960px; height:540px; background:white; border-radius:6px; box-shadow:0 10px 40px rgba(2,6,23,.6); overflow:auto; position:relative; padding:18px; transform-origin:center; background:linear-gradient(180deg,#ffffff,#f7f7fb); color:#111;}
-  .slide [contenteditable="true"] {min-height:40px; outline:none;}
-  .toolbar {display:flex; gap:8px; align-items:center; margin-bottom:8px;}
-  .small {font-size:13px;padding:6px 8px;}
-  .row {display:flex; gap:8px;}
-  .status {font-size:13px; color:var(--muted);}
-  .modal {position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.6); z-index:50;}
-  .modal-card {width:720px; background:var(--panel); padding:12px; border-radius:10px; color:var(--white);}
-  textarea{width:100%; min-height:180px; font-family:monospace; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--white);}
-  input[type="text"]{width:100%; padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--white);}
-  footer {font-size:12px; color:var(--muted); margin-top:8px;}
-  .copy {display:inline-flex; gap:6px; align-items:center;}
-  .muted {color:var(--muted)}
-  .danger {background:#7f1d1d;border:0;}
-  .ai-box {margin-top:8px; display:flex; gap:8px; flex-direction:column;}
-  .split-info {margin-top:8px; font-size:13px; color:var(--muted);}
+  html,body{height:100%;margin:0;font-family:Roboto, Arial, sans-serif;background:var(--bg);color:#202124;}
+  /* layout */
+  .app{display:flex; flex-direction:column; height:100vh; overflow:hidden;}
+  .topbar{height:64px; display:flex; align-items:center; gap:12px; padding:8px 16px; background:var(--top); box-shadow:0 1px 0 rgba(0,0,0,0.08); z-index:30;}
+  .logo{display:flex; align-items:center; gap:8px;}
+  .logo .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);}
+  .title-input{border:0; font-size:16px; font-weight:500; outline:none; width:320px;}
+  .top-actions{margin-left:auto; display:flex; gap:8px; align-items:center;}
+  button {background:transparent;border:0;padding:8px 12px;border-radius:4px;cursor:pointer;color:var(--muted);font-size:14px;}
+  button:hover{background:rgba(60,64,67,0.06); color:#202124;}
+  button.primary{background:var(--accent);color:white;font-weight:500}
+  .toolbar-divider{width:1px;height:28px;background:#e8eaed;border-radius:2px;margin:0 6px;}
+  .main{display:flex; flex:1; overflow:hidden;}
+  .leftpane{width:260px; background:var(--left); border-right:1px solid var(--thumb-border); padding:12px; overflow:auto;}
+  .left-actions{display:flex; gap:8px; margin-bottom:8px;}
+  .thumbs{display:flex;flex-direction:column; gap:10px;}
+  .thumb{background:linear-gradient(180deg, #fff, #fbfdff); border:1px solid #e3e6ea; border-radius:6px; padding:6px; cursor:pointer; display:flex; gap:8px; align-items:center; box-shadow:0 1px 2px var(--shadow);}
+  .thumb.selected{outline:3px solid rgba(26,115,232,0.12);}
+  .thumb .mini{width:120px; height:68px; background:#f8f9fa; border-radius:3px; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#666; font-size:12px;}
+  .thumb .meta{flex:1; font-size:12px; color:var(--muted);}
+  .center{flex:1; display:flex; flex-direction:column; align-items:center; padding:20px; overflow:auto;}
+  .canvas-wrap{width:100%; display:flex; justify-content:center; align-items:flex-start; padding:12px;}
+  .slide-frame{width:1024px; height:576px; background:var(--slide-bg); border-radius:6px; box-shadow:0 8px 30px rgba(60,64,67,0.12); overflow:auto; position:relative; padding:28px; transform-origin:center;}
+  .slide-frame [contenteditable="true"]{outline:none; min-height:18px;}
+  .bottombar{height:44px; display:flex; align-items:center; gap:8px; padding:6px 12px; border-top:1px solid #e8eaed; background:#fff;}
+  .small{font-size:13px;padding:6px 8px;border-radius:4px}
+  /* modals */
+  .modal-back{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:60;}
+  .modal{width:760px; background:white; border-radius:8px; padding:12px;}
+  textarea{width:100%; min-height:160px; font-family:monospace; font-size:13px; padding:8px;}
+  input[type=text]{padding:8px;border-radius:6px;border:1px solid #dadce0;width:100%;}
+  /* presenter mode */
+  .present-overlay{position:fixed; inset:0; background:black; display:none; align-items:center; justify-content:center; z-index:9999;}
+  .present-slide{width:90vw;height:60vh;background:white;border-radius:6px;padding:28px; overflow:auto; box-shadow:0 20px 80px rgba(0,0,0,0.6);}
+  .present-controls{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:10000;}
+  .present-counter{position:fixed; top:18px; right:24px; color:white; font-size:14px; z-index:10001;}
+  /* responsive */
+  @media(max-width:980px){ .leftpane{display:none} .slide-frame{width:720px;height:405px;} }
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="sidebar" id="sidebar">
-    <header>
-      <div>
-        <h1>Slides Editor</h1>
-        <div class="hint">Static HTML editor · saves to JSONBin · anyone with link can edit</div>
-      </div>
-      <div class="controls">
-        <button id="newSlide" title="Add slide">+ Slide</button>
-        <button id="saveBtn" class="primary">Save</button>
-      </div>
-    </header>
-
-    <div class="toolbar">
-      <input id="titleInput" type="text" placeholder="Presentation title (optional)" />
-      <button id="insertHTML" class="small">Insert HTML</button>
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="logo"><div class="dot"></div><div style="font-weight:500">Slides</div></div>
+    <input id="titleInput" class="title-input" placeholder="Untitled presentation" />
+    <div class="top-actions">
+      <button id="undoBtn" title="Undo">Undo</button>
+      <button id="redoBtn" title="Redo">Redo</button>
+      <div class="toolbar-divider"></div>
+      <button id="presentBtn" class="primary" title="Present (Ctrl+Enter)">Present</button>
+      <button id="saveBtn" title="Save">Save</button>
+      <button id="insertHTML" title="Insert HTML">Insert HTML</button>
+      <button id="aiInsert" title="AI Insert">AI</button>
+      <div class="toolbar-divider"></div>
+      <button id="shareBtn" title="Copy share link">Share</button>
     </div>
-
-    <div class="ai-box">
-      <div style="display:flex; gap:8px;">
-        <button id="aiSuggest" class="small">AI Suggest (Puter.js)</button>
-        <button id="aiInsert" class="small">AI Insert HTML</button>
-        <div class="status" id="aiStatus">AI: <span class="muted">idle</span></div>
-      </div>
-      <div class="hint">If Puter.js is loaded on the page it will be used. If not available you'll get instructions.</div>
-    </div>
-
-    <div class="split-info" id="splitInfo"></div>
-
-    <div class="slides-list" id="slidesList" aria-label="Slides thumbnails"></div>
-
-    <footer>
-      <div>Shareable link (includes key):</div>
-      <div style="display:flex; gap:8px; margin-top:6px;">
-        <input id="shareLink" type="text" readonly />
-        <button id="copyLink" class="small">Copy</button>
-      </div>
-      <div style="margin-top:8px;">
-        <div class="muted">Provide URL hash like: <code>#bin=BIN_ID&key=MASTER_KEY</code></div>
-      </div>
-    </footer>
   </div>
 
-  <div class="preview">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div class="toolbar">
-        <button id="prevSlide" class="small">&larr;</button>
-        <button id="nextSlide" class="small">&rarr;</button>
-        <button id="delSlide" class="small danger">Delete</button>
-        <span class="status" id="saveStatus">Not saved</span>
+  <div class="main">
+    <div class="leftpane">
+      <div class="left-actions">
+        <button id="newSlide">+ New</button>
+        <button id="dupSlideBtn">Dup</button>
+        <button id="delSlideBtn">Del</button>
       </div>
-      <div class="muted">Slides: <span id="slideCount">0</span></div>
+      <div class="thumbs" id="slidesList" aria-label="Slides thumbnails"></div>
     </div>
 
-    <div class="canvas" id="canvasArea">
-      <!-- slide rendered here -->
+    <div class="center">
+      <div style="width:100%; display:flex; justify-content:center; margin-bottom:8px;">
+        <div style="display:flex; gap:8px;">
+          <button id="prevSlide" class="small">&larr;</button>
+          <button id="nextSlide" class="small">&rarr;</button>
+          <div style="align-self:center;color:var(--muted)">Slide <span id="currentIndex">1</span> / <span id="totalSlides">1</span></div>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <div class="slide-frame" id="canvasArea" tabindex="0" aria-label="Slide editor">
+          <!-- slide content -->
+        </div>
+      </div>
+
+      <div class="bottombar">
+        <div class="muted" id="saveStatus">Not saved</div>
+        <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+          <div class="muted">Shareable link:</div>
+          <input id="shareLink" type="text" readonly style="width:420px; border:1px solid #e8eaed; padding:6px; border-radius:6px;"/>
+          <button id="copyLink" class="small">Copy</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- modals -->
-<div id="modal" style="display:none;"></div>
+<!-- modal placeholder -->
+<div id="modalRoot"></div>
+
+<!-- presentation overlay -->
+<div id="presentOverlay" class="present-overlay">
+  <div class="present-counter" id="presentCounter"></div>
+  <div class="present-slide" id="presentSlide"></div>
+  <div class="present-controls" id="presentControls">
+    <button id="prevPresent" class="small">Prev</button>
+    <button id="exitPresent" class="small">Exit</button>
+    <button id="nextPresent" class="small">Next</button>
+  </div>
+</div>
 
 <script>
 /* =========================
-   Basic state & helpers
+   CONFIG: JSONBin key (HARDCODED per user request)
    ========================= */
-const MAX_PART_BYTES = 48000; // safe part size in bytes (approx). adjust if needed
-const API_BASE = 'https://api.jsonbin.io/v3/b';
-
-function parseHash() {
-  const h = location.hash.slice(1);
-  const params = new URLSearchParams(h.replace(/&/g,'&'));
-  return { bin: params.get('bin') || '', key: params.get('key') || '' };
-}
-let { bin: INITIAL_BIN, key: MASTER_KEY } = parseHash();
-
-function updateShareLink(binId) {
-  const key = MASTER_KEY || '';
-  const url = location.origin + location.pathname + '#bin=' + encodeURIComponent(binId || '') + '&key=' + encodeURIComponent(key);
-  document.getElementById('shareLink').value = url;
-}
-
-function uuid() {
-  return 'id-' + Math.random().toString(36).slice(2,10);
-}
-
-function bytesOf(str) {
-  // compute approximate byte length of UTF-8 string
-  return new TextEncoder().encode(str).length;
+const JSONBIN_API = 'https://api.jsonbin.io/v3/b';
+const MASTER_KEY = '$2a$10$w7kHZII5PZ.x1MhtZTBQm.WFZP1ZkfvsbDscb/WNBo9.0kmDtxgH.'; // <-- inserted as requested
+// optional initial bin from hash
+function parseHash(){ const h=location.hash.slice(1); const p=new URLSearchParams(h); return {bin:p.get('bin')||'', key:p.get('key')||''}; }
+const hash = parseHash();
+let INITIAL_BIN = hash.bin || null;
+if (hash.key) {
+  // if user also provided key in hash, it overrides hardcoded (keeps flexibility)
+  // but per request we keep embedded key by default
+  // MASTER_KEY = hash.key; // commented to preserve hardcoded per user's request
 }
 
 /* =========================
-   Slides data model
+   App state
    ========================= */
+function uuid(){ return 'id-'+Math.random().toString(36).slice(2,10); }
 let state = {
   title: 'Untitled presentation',
-  slides: [
-    { id: uuid(), html: '<h1 contenteditable="true">Welcome</h1><p contenteditable="true">Edit this slide.</p>' }
-  ],
+  slides: [{ id: uuid(), html: '<h1 contenteditable="true">Welcome</h1><p contenteditable="true">Double-click to edit HTML. Use Insert HTML to paste markup.</p>' }],
   mainBinId: INITIAL_BIN || null,
-  parts: null // if split: { manifestId: ..., parts: [ids...] }
+  parts: null
 };
 let selectedIndex = 0;
+let unsaved = false;
 
 /* =========================
-   UI render functions
+   DOM refs
    ========================= */
-function renderSlidesList() {
-  const container = document.getElementById('slidesList');
-  container.innerHTML = '';
-  state.slides.forEach((s, i) => {
-    const item = document.createElement('div');
-    item.className = 'slide-thumb' + (i===selectedIndex ? ' selected':'');
-    item.dataset.index = i;
-    const left = document.createElement('div');
-    left.innerHTML = `<div style="font-weight:600">Slide ${i+1}</div><div class="muted" style="font-size:13px;">${(s.html.replace(/<[^>]*>/g,'').slice(0,60) || 'empty')}</div>`;
-    const right = document.createElement('div');
-    right.innerHTML = `<button class="small" data-action="dup">dup</button>`;
-    item.appendChild(left); item.appendChild(right);
-    item.addEventListener('click', ()=> { selectedIndex = i; render(); });
-    right.querySelector('[data-action="dup"]').addEventListener('click', (ev)=>{ ev.stopPropagation(); dupSlide(i); });
-    container.appendChild(item);
+const slidesList = document.getElementById('slidesList');
+const canvasArea = document.getElementById('canvasArea');
+const titleInput = document.getElementById('titleInput');
+const saveStatus = document.getElementById('saveStatus');
+const shareLink = document.getElementById('shareLink');
+const currentIndexEl = document.getElementById('currentIndex');
+const totalSlidesEl = document.getElementById('totalSlides');
+const presentOverlay = document.getElementById('presentOverlay');
+const presentSlide = document.getElementById('presentSlide');
+const presentCounter = document.getElementById('presentCounter');
+
+/* =========================
+   Utilities
+   ========================= */
+function bytesOf(str){ return new TextEncoder().encode(str).length; }
+const MAX_PART_BYTES = 48000;
+
+function updateShareLink(binId){
+  const url = location.origin + location.pathname + '#bin=' + encodeURIComponent(binId||'') + '&key=' + encodeURIComponent(MASTER_KEY);
+  shareLink.value = url;
+}
+function setSaveStatus(txt, busy=false){
+  saveStatus.textContent = txt;
+  if (!busy) unsaved = false;
+}
+function markUnsaved(){ unsaved = true; saveStatus.textContent = 'Unsaved changes'; }
+
+/* =========================
+   Render UI
+   ========================= */
+function renderList(){
+  slidesList.innerHTML = '';
+  state.slides.forEach((s,i)=>{
+    const t = document.createElement('div');
+    t.className = 'thumb' + (i===selectedIndex ? ' selected':'');
+    t.dataset.index = i;
+    t.innerHTML = `<div class="mini">${i+1}</div><div class="meta"><div style="font-weight:600">Slide ${i+1}</div><div style="color:var(--muted);font-size:12px">${stripText(s.html).slice(0,70) || 'Empty'}</div></div>`;
+    t.addEventListener('click', ()=>{ selectedIndex = i; renderCanvas(); renderList(); });
+    slidesList.appendChild(t);
   });
-  document.getElementById('slideCount').textContent = state.slides.length;
+  currentIndexEl.textContent = selectedIndex+1;
+  totalSlidesEl.textContent = state.slides.length;
 }
 
-function renderCanvas() {
-  const area = document.getElementById('canvasArea');
-  area.innerHTML = '';
-  const slideData = state.slides[selectedIndex];
-  const slideEl = document.createElement('div');
-  slideEl.className = 'slide';
-  slideEl.innerHTML = slideData.html;
-  // make all editable elements contenteditable if not already
-  slideEl.querySelectorAll('p,h1,h2,h3,div,span').forEach(el=>{
-    if (!el.hasAttribute('contenteditable')) {
-      el.setAttribute('contenteditable','true');
-    }
+function stripText(html){ return html.replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim(); }
+
+function renderCanvas(){
+  const data = state.slides[selectedIndex];
+  canvasArea.innerHTML = data.html;
+  // ensure elements are editable
+  canvasArea.querySelectorAll('p,h1,h2,h3,div,span,li').forEach(el=>{
+    if (!el.hasAttribute('contenteditable')) el.setAttribute('contenteditable','true');
   });
-  // attach simple click handlers: double-click to edit HTML in modal
-  slideEl.addEventListener('dblclick', () => openEditHTMLModal(selectedIndex));
-  // listen to input to update model
-  slideEl.addEventListener('input', debounce(()=> {
-    state.slides[selectedIndex].html = slideEl.innerHTML;
+  // listen to input changes inside canvas to update state
+  canvasArea.oninput = debounce(()=> {
+    state.slides[selectedIndex].html = canvasArea.innerHTML;
     markUnsaved();
-  }, 300));
-  area.appendChild(slideEl);
-}
-
-function render() {
-  renderSlidesList();
-  renderCanvas();
-  document.getElementById('titleInput').value = state.title;
-  updateShareLink(state.mainBinId || '');
+  }, 250);
+  // double click to edit raw html
+  canvasArea.ondblclick = ()=> openRawHtmlModal(selectedIndex);
 }
 
 /* =========================
-   Slide actions
+   Slide operations
    ========================= */
-function addSlide(afterIndex=null) {
-  const slide = { id: uuid(), html: '<h2 contenteditable="true">New Slide</h2><p contenteditable="true">Double-click this slide to edit raw HTML.</p>' };
-  if (afterIndex === null) state.slides.push(slide);
-  else state.slides.splice(afterIndex+1, 0, slide);
-  selectedIndex = (afterIndex === null) ? state.slides.length-1 : afterIndex+1;
-  markUnsaved();
-  render();
+function addSlide(afterIndex=null){
+  const slide = { id: uuid(), html: '<h2 contenteditable="true">New Slide</h2><p contenteditable="true">Notes...</p>' };
+  if (afterIndex===null) state.slides.push(slide);
+  else state.slides.splice(afterIndex+1,0,slide);
+  selectedIndex = (afterIndex===null) ? state.slides.length-1 : afterIndex+1;
+  renderList(); renderCanvas(); markUnsaved();
+}
+function dupSlide(index=null){
+  const i = index===null ? selectedIndex : index;
+  const copy = { id: uuid(), html: state.slides[i].html };
+  state.slides.splice(i+1,0,copy);
+  selectedIndex = i+1;
+  renderList(); renderCanvas(); markUnsaved();
+}
+function delSlide(index=null){
+  const i = index===null ? selectedIndex : index;
+  if (state.slides.length === 1){ alert('You must keep at least one slide.'); return; }
+  if (!confirm('Delete slide '+(i+1)+'?')) return;
+  state.slides.splice(i,1);
+  selectedIndex = Math.max(0, i-1);
+  renderList(); renderCanvas(); markUnsaved();
 }
 
-function dupSlide(index) {
-  const copy = { id: uuid(), html: state.slides[index].html };
-  state.slides.splice(index+1, 0, copy);
-  selectedIndex = index+1;
-  markUnsaved();
-  render();
-}
-
-function deleteSlide(index) {
-  if (state.slides.length <= 1) { alert('At least one slide required.'); return; }
-  state.slides.splice(index,1);
-  selectedIndex = Math.max(0, index-1);
-  render();
-  markUnsaved();
-}
-
-function openEditHTMLModal(index) {
-  const modal = document.getElementById('modal');
-  modal.innerHTML = `
-    <div class="modal">
-      <div class="modal-card">
-        <h3>Edit slide HTML</h3>
-        <textarea id="rawHtml">${escapeHtml(state.slides[index].html)}</textarea>
-        <div style="display:flex; gap:8px; margin-top:10px; justify-content:flex-end;">
-          <button id="modalCancel">Cancel</button>
-          <button id="modalSave" class="primary">Save</button>
-        </div>
-      </div>
-    </div>
-  `;
-  modal.style.display = 'block';
-  document.getElementById('modalCancel').onclick = ()=> { modal.style.display='none'; modal.innerHTML=''; };
-  document.getElementById('modalSave').onclick = ()=> {
+/* =========================
+   Raw HTML modal / Insert HTML
+   ========================= */
+function openRawHtmlModal(index){
+  const modalRoot = document.getElementById('modalRoot');
+  modalRoot.innerHTML = `<div class="modal-back"><div class="modal"><h3>Edit raw HTML (slide ${index+1})</h3><textarea id="rawHtml">${escapeHtml(state.slides[index].html)}</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button id="rawCancel">Cancel</button><button id="rawSave" class="primary">Save</button></div></div></div>`;
+  document.getElementById('rawCancel').onclick = ()=> { modalRoot.innerHTML=''; };
+  document.getElementById('rawSave').onclick = ()=> {
     const val = document.getElementById('rawHtml').value;
     state.slides[index].html = val;
-    modal.style.display='none'; modal.innerHTML='';
-    render();
-    markUnsaved();
+    modalRoot.innerHTML = '';
+    renderList(); renderCanvas(); markUnsaved();
   };
 }
-
-function escapeHtml(str){
-  return str.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function openInsertHtmlModal(){
+  const modalRoot = document.getElementById('modalRoot');
+  modalRoot.innerHTML = `<div class="modal-back"><div class="modal"><h3>Insert HTML into current slide</h3><textarea id="insHtml" placeholder="<div>HTML here</div>"></textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px"><button id="insCancel">Cancel</button><button id="insSave" class="primary">Insert</button></div></div></div>`;
+  document.getElementById('insCancel').onclick = ()=> { modalRoot.innerHTML=''; };
+  document.getElementById('insSave').onclick = ()=> {
+    const html = document.getElementById('insHtml').value;
+    state.slides[selectedIndex].html += '\n' + html;
+    modalRoot.innerHTML = '';
+    renderList(); renderCanvas(); markUnsaved();
+  };
 }
+function escapeHtml(s){ return s.replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 /* =========================
-   Save / load to JSONBin
+   JSONBin save / load (single + split)
    ========================= */
+async function buildHeaders(){ return { 'Content-Type':'application/json', 'X-Master-Key': MASTER_KEY }; }
 
-function manifestObject() {
-  return {
-    type: 'slides-manifest',
-    title: state.title,
-    createdAt: new Date().toISOString(),
-    parts: state.parts ? state.parts : null,
-    slidesCount: state.slides.length,
-    note: 'If parts present, fetch each part and concat to reassemble slides JSON'
-  };
-}
-
-async function saveToJSONBin() {
-  if (!MASTER_KEY) {
-    alert('No JSONBin master key found in URL hash. Add it like: #bin=BIN_ID&key=MASTER_KEY');
-    return;
-  }
-  setStatus('Saving...', true);
-  // assemble full object
-  const doc = { title: state.title, slides: state.slides };
-  const jsonStr = JSON.stringify(doc);
-  const jsonBytes = bytesOf(jsonStr);
-
-  try {
-    if (jsonBytes <= MAX_PART_BYTES) {
-      // try update existing main bin or create if missing
-      let targetId = state.mainBinId;
-      const saved = await putOrCreateBin(targetId, jsonStr);
-      state.mainBinId = saved.id;
-      state.parts = null;
-      await saveManifest(saved.id, null);
-      setStatus('Saved (single) to ' + saved.id);
-      updateShareLink(state.mainBinId);
-      return;
-    }
-
-    // too big: split into parts
-    const chunks = splitStringIntoChunks(jsonStr, MAX_PART_BYTES);
-    // create bins for each chunk
-    const partIds = [];
-    for (let i=0;i<chunks.length;i++){
-      const chunkStr = chunks[i];
-      const created = await createBin(chunkStr);
-      partIds.push(created.id);
-    }
-    // create manifest in main bin (if we have existing main bin, update it with manifest)
-    state.parts = { parts: partIds };
-    const manifestPayload = JSON.stringify({
-      manifestFor: state.mainBinId || null,
-      title: state.title,
-      parts: partIds,
-      createdAt: new Date().toISOString(),
-      type: 'slides-manifest'
-    });
-    // save manifest to main bin id (create or update)
-    const manifestSaved = await putOrCreateBin(state.mainBinId, manifestPayload);
-    // store manifest id as mainBinId
-    state.mainBinId = manifestSaved.id;
-    setStatus('Saved (split into ' + partIds.length + ' parts). Manifest: ' + manifestSaved.id);
-    updateShareLink(state.mainBinId);
-  } catch (err) {
-    console.error(err);
-    setStatus('Save failed: ' + (err.message || err));
-    alert('Save failed: ' + (err.message || err));
-  }
-}
-
-async function saveManifest(mainId, parts) {
-  // store a small manifest in the main bin
-  const manifest = manifestObject();
-  manifest.parts = parts;
-  const str = JSON.stringify(manifest);
-  await putOrCreateBin(mainId, str);
-}
-
-async function buildFetchHeaders() {
-  return {
-    "Content-Type":"application/json",
-    "X-Master-Key": MASTER_KEY
-  };
-}
-
-async function createBin(payloadStr) {
-  const res = await fetch(API_BASE, {
-    method: 'POST',
-    headers: await buildFetchHeaders(),
-    body: payloadStr
-  });
-  if (!res.ok) throw new Error('jsonbin create failed: ' + res.status + ' ' + (await res.text()));
+async function createBin(payloadStr){
+  const res = await fetch(JSONBIN_API, { method:'POST', headers: await buildHeaders(), body: payloadStr });
+  if (!res.ok) throw new Error('Create failed: '+res.status);
   const j = await res.json();
-  // API may return created id in different structure; we attempt to read .record? .metadata.id etc.
-  // For jsonbin v3, created object appears in j.record?.id or j.metadata?.id
   const id = j.record?.id || j.metadata?.id || j.id || (j?.data?.id) || null;
-  return { id: id || j?.id || null, raw: j };
+  return { id: id||j.id||null, raw:j };
 }
-
-async function putOrCreateBin(binId, payloadStr) {
-  // if we have an id, try to PUT to it; otherwise create
-  if (binId) {
-    const res = await fetch(API_BASE + '/' + encodeURIComponent(binId), {
-      method: 'PUT',
-      headers: await buildFetchHeaders(),
-      body: payloadStr
-    });
-    if (res.ok) {
-      const j = await res.json();
-      const id = j.record?.id || j.metadata?.id || binId;
-      return { id, raw: j };
-    } else {
-      // if put fails due to size or 4xx, fallback to create
-      const text = await res.text();
-      console.warn('PUT failed, creating new bin: ', res.status, text);
-      return await createBin(payloadStr);
-    }
+async function putOrCreateBin(binId, payloadStr){
+  if (binId){
+    const res = await fetch(JSONBIN_API + '/' + encodeURIComponent(binId), { method:'PUT', headers: await buildHeaders(), body: payloadStr });
+    if (res.ok){ const j = await res.json(); return { id: j.record?.id || j.metadata?.id || binId, raw: j }; }
+    // fallback to create
+    return await createBin(payloadStr);
   } else {
     return await createBin(payloadStr);
   }
 }
-
-function splitStringIntoChunks(str, maxBytes) {
-  // split JSON string into chunks not exceeding maxBytes (UTF-8).
-  // We'll slice roughly by characters but ensure bytes limit.
-  const encoder = new TextEncoder();
-  const out = [];
-  let i = 0;
-  while (i < str.length) {
-    // expand j until bytes exceed
-    let j = Math.min(i + 40000, str.length); // start guess
-    if (encoder.encode(str.slice(i,j)).length > maxBytes) {
-      // reduce j
-      while (j > i && encoder.encode(str.slice(i,j)).length > maxBytes) j--;
-      if (j === i) throw new Error('A single character exceeds byte limit unexpectedly.');
-    } else {
-      // try to extend j while safe
-      while (j < str.length && encoder.encode(str.slice(i, Math.min(str.length, j+5000))).length <= maxBytes) {
-        j += 5000;
-      }
-    }
-    out.push(str.slice(i,j));
-    i = j;
+function splitStringIntoChunks(str, maxBytes){
+  const encoder = new TextEncoder(); const out=[]; let i=0;
+  while (i<str.length){
+    let j = Math.min(i+40000, str.length);
+    while (j>i && encoder.encode(str.slice(i,j)).length > maxBytes) j--;
+    if (j===i) throw new Error('Chunking error');
+    out.push(str.slice(i,j)); i=j;
   }
   return out;
 }
 
-/* =========================
-   Load from JSONBin (main bin / manifest)
-   ========================= */
-async function loadFromJSONBin(binId) {
-  if (!binId) return;
+async function saveToJSONBin(){
   try {
-    setStatus('Loading from ' + binId + ' ...', true);
-    // fetch bin content
-    const url = API_BASE + '/' + encodeURIComponent(binId) + '/latest';
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'X-Master-Key': MASTER_KEY
-      }
-    });
-    if (!res.ok) {
-      // some public bins may allow GET without key; try without key
-      const res2 = await fetch(API_BASE + '/' + encodeURIComponent(binId) + '/latest');
-      if (!res2.ok) throw new Error('Failed to fetch bin: ' + res2.status);
-      const j2 = await res2.json();
-      await interpretLoadedData(j2);
-      setStatus('Loaded (public)');
+    setSaveStatus('Saving...', true);
+    const doc = { title: state.title, slides: state.slides };
+    const jsonStr = JSON.stringify(doc);
+    const size = bytesOf(jsonStr);
+    if (size <= MAX_PART_BYTES){
+      const saved = await putOrCreateBin(state.mainBinId, jsonStr);
+      state.mainBinId = saved.id;
+      state.parts = null;
+      updateShareLink(state.mainBinId);
+      setSaveStatus('Saved to ' + saved.id);
       return;
     }
-    const j = await res.json();
-    await interpretLoadedData(j);
-    setStatus('Loaded');
-  } catch (err) {
+    // too big: split into chunks and create bins
+    const chunks = splitStringIntoChunks(jsonStr, MAX_PART_BYTES);
+    const partIds = [];
+    for (let i=0;i<chunks.length;i++){
+      const created = await createBin(chunks[i]);
+      partIds.push(created.id);
+    }
+    // save manifest in main bin
+    const manifest = JSON.stringify({ type:'slides-manifest', title: state.title, parts: partIds, createdAt: new Date().toISOString() });
+    const manifestSaved = await putOrCreateBin(state.mainBinId, manifest);
+    state.mainBinId = manifestSaved.id;
+    state.parts = { parts: partIds };
+    updateShareLink(state.mainBinId);
+    setSaveStatus('Saved (split into '+partIds.length+' parts). Manifest: ' + manifestSaved.id);
+  } catch (err){
     console.error(err);
-    setStatus('Load failed: ' + (err.message || err));
+    setSaveStatus('Save failed: ' + (err.message || err));
+    alert('Save failed: ' + (err.message || err));
   }
 }
 
-async function fetchRawBin(binId) {
-  const url = API_BASE + '/' + encodeURIComponent(binId) + '/latest';
+async function fetchRawBin(binId){
+  const url = JSONBIN_API + '/' + encodeURIComponent(binId) + '/latest';
   const res = await fetch(url, { headers: { 'X-Master-Key': MASTER_KEY } });
-  if (!res.ok) throw new Error('Failed fetching part ' + binId + ': ' + res.status);
+  if (!res.ok) throw new Error('Failed fetch part '+binId+': '+res.status);
   return await res.json();
 }
 
-async function interpretLoadedData(jsonResp) {
-  // JSONBin returns different shapes. Try to find stored JSON.
-  // Common: j.record?.data or j.record?.json or j.record?.content or j.metadata?.record
+async function loadFromBin(binId){
+  if (!binId) return;
+  try {
+    setSaveStatus('Loading...', true);
+    const url = JSONBIN_API + '/' + encodeURIComponent(binId) + '/latest';
+    const res = await fetch(url, { headers: { 'X-Master-Key': MASTER_KEY }});
+    if (!res.ok) throw new Error('Load failed: '+res.status);
+    const j = await res.json();
+    await interpretLoadedData(j);
+    setSaveStatus('Loaded ' + binId);
+  } catch (err){
+    console.error(err);
+    setSaveStatus('Load failed: ' + (err.message || err));
+    alert('Load failed: ' + (err.message || err));
+  }
+}
+
+async function interpretLoadedData(j){
   let payload = null;
-  if (jsonResp.record?.data) payload = jsonResp.record.data;
-  else if (jsonResp.record?.json) payload = jsonResp.record.json;
-  else if (jsonResp.record?.content) payload = jsonResp.record.content;
-  else if (jsonResp.record) payload = jsonResp.record;
-  else if (jsonResp) payload = jsonResp;
-  // payload might be entire manifest or slides doc string
-  // if payload is an object and has type: slides-manifest or parts -> treat as manifest
-  if (typeof payload === 'object' && payload.type === 'slides-manifest' && payload.parts && Array.isArray(payload.parts)) {
-    // fetch parts and concat
+  if (j.record?.data) payload = j.record.data;
+  else if (j.record?.json) payload = j.record.json;
+  else if (j.record?.content) payload = j.record.content;
+  else if (j.record) payload = j.record;
+  else payload = j;
+  if (typeof payload === 'object' && payload.type === 'slides-manifest' && payload.parts && Array.isArray(payload.parts)){
     const parts = payload.parts;
-    const arrays = [];
-    for (const p of parts) {
+    const arr = [];
+    for (const p of parts){
       const r = await fetchRawBin(p);
-      // get raw string from r.record?.json or r.record?.data
-      let piece = null;
-      if (r.record?.data) piece = r.record.data;
-      else if (r.record) piece = r.record;
-      else piece = r;
-      // piece may be an object — if so try to stringify it (reverse of our save)
-      if (typeof piece === 'object') {
-        piece = JSON.stringify(piece);
-      }
-      arrays.push(typeof piece === 'string' ? piece : JSON.stringify(piece));
+      let piece = r.record?.data || r.record || r;
+      if (typeof piece === 'object') piece = JSON.stringify(piece);
+      arr.push(piece);
     }
-    const full = arrays.join('');
+    const full = arr.join('');
     const parsed = JSON.parse(full);
-    if (parsed.title) state.title = parsed.title;
+    state.title = parsed.title || state.title;
     state.slides = parsed.slides || [];
-    state.mainBinId = jsonResp.record?.id || jsonResp.metadata?.id || state.mainBinId;
+    state.mainBinId = j.record?.id || j.metadata?.id || state.mainBinId;
     state.parts = { parts };
-    render();
+    renderList(); renderCanvas();
+    updateShareLink(state.mainBinId);
   } else {
-    // payload may be object with slides directly or string encoded JSON
     let doc = null;
-    if (typeof payload === 'string') {
-      try { doc = JSON.parse(payload); } catch (e) { doc = payload; }
-    } else if (typeof payload === 'object') {
-      doc = payload;
-    }
-    if (doc) {
-      if (doc.slides) {
-        state.title = doc.title || state.title;
-        state.slides = doc.slides;
-        state.mainBinId = jsonResp.record?.id || jsonResp.metadata?.id || state.mainBinId;
-        state.parts = null;
-        render();
-      } else {
-        // unknown shape - store raw text in first slide
-        state.slides = [{ id: uuid(), html: '<pre contenteditable="true">' + escapeHtml(JSON.stringify(payload, null, 2)) + '</pre>' }];
-        render();
-      }
+    if (typeof payload === 'string'){
+      try { doc = JSON.parse(payload); } catch(e){ doc = payload; }
+    } else doc = payload;
+    if (doc && doc.slides){
+      state.title = doc.title || state.title;
+      state.slides = doc.slides;
+      state.mainBinId = j.record?.id || j.metadata?.id || state.mainBinId;
+      state.parts = null;
+      renderList(); renderCanvas(); updateShareLink(state.mainBinId);
+    } else {
+      // unknown shape: put raw into a slide
+      state.slides = [{ id: uuid(), html: '<pre contenteditable="true">' + escapeHtml(JSON.stringify(payload, null, 2)) + '</pre>' }];
+      renderList(); renderCanvas();
     }
   }
 }
 
 /* =========================
-   UI wiring
+   AI helper (Puter.js best-effort)
+   ========================= */
+async function tryPuter(prompt){
+  if (!window.Puter) throw new Error('Puter not found on window. Include Puter.js to use AI.');
+  const put = window.Puter;
+  const candidates = ['query','ask','complete','generate','run','create'];
+  for (const fn of candidates){
+    if (typeof put[fn] === 'function'){
+      try { return await put[fn](prompt); } catch(e){ console.warn('Puter method failed',fn,e); }
+    }
+  }
+  if (typeof put === 'function') return await put(prompt);
+  throw new Error('No usable Puter API found');
+}
+
+/* =========================
+   Presentation mode
+   ========================= */
+let presenting = false;
+let presentIndex = 0;
+function openPresentation(startIndex=0){
+  presenting = true; presentIndex = startIndex; renderPresent();
+  presentOverlay.style.display = 'flex';
+  document.addEventListener('keydown', presentKeyHandler);
+  // request fullscreen for immersive presenter mode if available
+  try { document.documentElement.requestFullscreen?.(); } catch(e){}
+}
+function closePresentation(){
+  presenting = false;
+  presentOverlay.style.display = 'none';
+  document.removeEventListener('keydown', presentKeyHandler);
+  try { document.exitFullscreen?.(); } catch(e){}
+}
+function renderPresent(){
+  const slide = state.slides[presentIndex];
+  presentSlide.innerHTML = slide ? slide.html : '';
+  // make present slide static (remove contenteditable)
+  presentSlide.querySelectorAll('[contenteditable]').forEach(el=> el.removeAttribute('contenteditable'));
+  presentCounter.textContent = (presentIndex+1) + ' / ' + state.slides.length;
+}
+function presentKeyHandler(e){
+  if (!presenting) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { nextPresent(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prevPresent(); }
+  else if (e.key === 'Escape') { closePresentation(); }
+}
+function nextPresent(){ presentIndex = Math.min(state.slides.length-1, presentIndex+1); renderPresent(); }
+function prevPresent(){ presentIndex = Math.max(0, presentIndex-1); renderPresent(); }
+
+/* =========================
+   Event wiring
    ========================= */
 document.getElementById('newSlide').addEventListener('click', ()=> addSlide(selectedIndex));
-document.getElementById('prevSlide').addEventListener('click', ()=> { selectedIndex = Math.max(0, selectedIndex-1); render();});
-document.getElementById('nextSlide').addEventListener('click', ()=> { selectedIndex = Math.min(state.slides.length-1, selectedIndex+1); render();});
-document.getElementById('delSlide').addEventListener('click', ()=> { if (confirm('Delete current slide?')){ deleteSlide(selectedIndex); }});
-document.getElementById('titleInput').addEventListener('change', (e)=> { state.title = e.target.value; markUnsaved(); });
-
-document.getElementById('insertHTML').addEventListener('click', ()=> openInsertHTMLModal());
-
+document.getElementById('dupSlideBtn').addEventListener('click', ()=> dupSlide());
+document.getElementById('delSlideBtn').addEventListener('click', ()=> delSlide());
+document.getElementById('prevSlide').addEventListener('click', ()=> { selectedIndex = Math.max(0, selectedIndex-1); renderList(); renderCanvas(); });
+document.getElementById('nextSlide').addEventListener('click', ()=> { selectedIndex = Math.min(state.slides.length-1, selectedIndex+1); renderList(); renderCanvas(); });
 document.getElementById('saveBtn').addEventListener('click', ()=> saveToJSONBin());
-
-document.getElementById('copyLink').addEventListener('click', ()=> {
-  navigator.clipboard.writeText(document.getElementById('shareLink').value).then(()=> {
-    alert('Copied link to clipboard.');
-  }).catch(()=> alert('Copy failed.'));
-});
-
-document.getElementById('shareLink').addEventListener('click', function(){ this.select(); });
-
-function openInsertHTMLModal() {
-  const modal = document.getElementById('modal');
-  modal.innerHTML = `
-    <div class="modal">
-      <div class="modal-card">
-        <h3>Insert HTML into current slide</h3>
-        <textarea id="insertHtmlArea" placeholder="<div>Some html</div>"></textarea>
-        <div style="display:flex; gap:8px; margin-top:10px; justify-content:flex-end;">
-          <button id="insertCancel">Cancel</button>
-          <button id="insertSave" class="primary">Insert</button>
-        </div>
-      </div>
-    </div>
-  `;
-  modal.style.display='block';
-  document.getElementById('insertCancel').onclick = ()=> { modal.style.display='none'; modal.innerHTML=''; };
-  document.getElementById('insertSave').onclick = ()=>{
-    const html = document.getElementById('insertHtmlArea').value;
-    // inject into slide at end
-    state.slides[selectedIndex].html += '\n' + html;
-    modal.style.display='none'; modal.innerHTML='';
-    render();
-    markUnsaved();
-  };
-}
-
-/* =========================
-   AI helper (Puter.js attempt)
-   ========================= */
-
-function tryPuter(promptText) {
-  // Best-effort: Try several likely Puter method names. If not present, fail gracefully.
-  return new Promise(async (resolve, reject) => {
-    try {
-      if (!window.Puter) return reject(new Error('Puter not found on window. Include Puter.js to use AI.'));
-      const put = window.Puter;
-      // Try common method names
-      const candidates = ['query','ask','complete','generate','run','create'];
-      for (const fn of candidates) {
-        if (typeof put[fn] === 'function') {
-          try {
-            const out = await put[fn](promptText);
-            return resolve(out);
-          } catch(e) {
-            // continue trying other methods
-            console.warn('Puter method ' + fn + ' failed:', e);
-          }
-        }
-      }
-      // fallback: if Puter is callable directly
-      if (typeof put === 'function') {
-        try {
-          const out = await put(promptText);
-          return resolve(out);
-        } catch(e) { /* ignore */ }
-      }
-      reject(new Error('No usable Puter method found.'));
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-document.getElementById('aiSuggest').addEventListener('click', async ()=>{
-  const status = document.getElementById('aiStatus');
-  status.innerHTML = '<span class="muted">thinking...</span>';
-  try {
-    const prompt = `You are an assistant that suggests slide text and small HTML snippets for a presentation titled "${state.title}". Provide a short HTML block for a new slide (one slide) that could be inserted. Keep it compact.`;
-    const out = await tryPuter(prompt);
-    // If out is object, try to extract text
-    const text = (typeof out === 'string') ? out : (out?.text || out?.result || JSON.stringify(out));
-    status.innerHTML = 'AI ready';
-    alert('AI suggestion (first 500 chars):\\n\\n' + text.slice(0,500));
-  } catch (err) {
-    status.innerHTML = '<span class="muted">idle</span>';
-    alert('Puter not available or failed: ' + (err.message || err));
-  }
-});
-
+document.getElementById('insertHTML').addEventListener('click', ()=> openInsertHtmlModal());
 document.getElementById('aiInsert').addEventListener('click', async ()=>{
-  const status = document.getElementById('aiStatus');
-  status.innerHTML = '<span class="muted">thinking...</span>';
   try {
-    const prompt = `You are an assistant that generates a single slide's HTML for a presentation titled "${state.title}". Output only the HTML snippet (no commentary). Keep it short (under 400 chars). Provide headings and maybe a small bullet list.`;
+    const prompt = `Generate a short HTML slide for a presentation titled "${state.title}". Output only the HTML. Keep it concise.`;
     const out = await tryPuter(prompt);
-    const text = (typeof out === 'string') ? out : (out?.text || out?.result || JSON.stringify(out));
-    // insert into current slide
-    state.slides[selectedIndex].html += '\n' + text;
-    render();
-    markUnsaved();
-    status.innerHTML = 'AI inserted';
-  } catch (err) {
-    status.innerHTML = '<span class="muted">idle</span>';
-    alert('AI insert failed: ' + (err.message || err));
+    const html = (typeof out === 'string') ? out : (out?.text || out?.result || JSON.stringify(out));
+    state.slides[selectedIndex].html += '\n' + html;
+    renderCanvas(); markUnsaved();
+  } catch (err){
+    alert('AI failed: ' + (err.message || err));
   }
 });
+document.getElementById('titleInput').addEventListener('input', (e)=> { state.title = e.target.value; markUnsaved(); });
 
-/* =========================
-   Helpers: status, debounce
-   ========================= */
-let unsaved = false;
-function markUnsaved() {
-  unsaved = true;
-  document.getElementById('saveStatus').textContent = 'Unsaved changes';
-}
-function setStatus(txt, busy=false) {
-  document.getElementById('saveStatus').textContent = txt;
-  if (!busy) unsaved = false;
-  // show split info
-  const si = document.getElementById('splitInfo');
-  if (state.parts && state.parts.parts) {
-    si.textContent = 'Presentation is split into ' + state.parts.parts.length + ' part(s). Manifest bin: ' + (state.mainBinId || '(unknown)');
-  } else {
-    si.textContent = '';
-  }
-}
-function debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms);} }
+document.getElementById('presentBtn').addEventListener('click', ()=> openPresentation(selectedIndex));
+document.getElementById('exitPresent').addEventListener('click', ()=> closePresentation());
+document.getElementById('prevPresent').addEventListener('click', ()=> prevPresent());
+document.getElementById('nextPresent').addEventListener('click', ()=> nextPresent());
 
-/* =========================
-   On load: wire defaults, attempt load if bin present
-   ========================= */
-render();
-
-// read hash again for runtime changes
-const { bin: BIN_IN_HASH, key: KEY_IN_HASH } = parseHash();
-if (KEY_IN_HASH) MASTER_KEY = KEY_IN_HASH;
-if (BIN_IN_HASH) {
-  state.mainBinId = BIN_IN_HASH;
-  updateShareLink(state.mainBinId);
-  // attempt load
-  loadFromJSONBin(state.mainBinId);
-} else {
+document.getElementById('shareBtn').addEventListener('click', ()=> {
   updateShareLink(state.mainBinId || '');
-  setStatus('Local (not loaded)');
-}
+  navigator.clipboard.writeText(shareLink.value).then(()=> alert('Share link copied'));
+});
+document.getElementById('copyLink').addEventListener('click', ()=> {
+  updateShareLink(state.mainBinId || '');
+  navigator.clipboard.writeText(shareLink.value).then(()=> alert('Copied'));
+});
+
+/* keyboard shortcuts */
+document.addEventListener('keydown', (e)=>{
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); openPresentation(selectedIndex); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); saveToJSONBin(); }
+  if (e.key === 'ArrowRight'){ /* navigate slide in editor */ }
+});
+
+/* before unload warn */
+window.addEventListener('beforeunload', function(e){
+  if (unsaved){ e.preventDefault(); e.returnValue = ''; }
+});
 
 /* =========================
-   Utility: fallback copy / paste, save on unload
+   Init: render and try load if bin present
    ========================= */
-window.addEventListener('beforeunload', function(e){
-  if (unsaved) {
-    e.preventDefault();
-    e.returnValue = '';
-  }
-});
+function init(){
+  titleInput.value = state.title;
+  renderList();
+  renderCanvas();
+  updateShareLink(state.mainBinId || '');
+  if (state.mainBinId) loadFromBin(state.mainBinId);
+}
+init();
+
+/* =========================
+   small helpers
+   ========================= */
+function debounce(fn,ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms);} }
+function escapeHtml(s){ return s.replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 </script>
 </body>
